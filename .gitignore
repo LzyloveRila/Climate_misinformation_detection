@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 *$py.class
+new data/
+bert_pretrain_model/
+predict-results/
+*.json
 
 # C extensions
 *.so
