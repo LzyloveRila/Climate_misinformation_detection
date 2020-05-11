@@ -12,7 +12,7 @@ def real_data_to_trainjson():
     # print(df)
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased",do_lower_case=True)
     truth_set = {}
-    count = 2762
+    count = 2100
     for row in df.itertuples():
         # print(row[21])  #18 text  21 type
         if row[21] == 'real':
@@ -22,13 +22,13 @@ def real_data_to_trainjson():
             if len(tokened_text)<1100 and len(tokened_text)> 25:
                 truth_set[key_name] = {"text":row[18],'label':0}
                 count += 1
-            if count == 4000:
+            if count == 3400:
                 break
 
     with open('train_fact.json','w') as f:
         json.dump(truth_set,f)
 
-real_data_to_trainjson()
+# real_data_to_trainjson()
 
 def chechk_len():
     with open('tiny_set.json','r') as f:
@@ -40,15 +40,15 @@ def chechk_len():
 
 
 def concatenate_pos_neg_set():
-    with open('train_climate.json','r') as f1:
+    with open('train.json','r') as f1:
         text1 = json.load(f1)
     f1.close()
-    with open('train_climate_all.json','r') as f2:
+    with open('train_neg.json','r') as f2:
         text2 = json.load(f2)
     f2.close()
 
     dataset = {**text1,**text2}
-    with open('train_climate_news.json','w') as f:
+    with open('train_total_balance_new.json','w') as f:
         json.dump(dataset,f)
 
 # concatenate_pos_neg_set()
@@ -189,12 +189,12 @@ def split_er_data():
     train_climate = {}
     count = 1782
     climate = []
-    for i in tqdm(data.values()):
+    for i in data.values():
         # print(i['lang'],i['isDuplicate'],i['title'],i['sentiment'])
         article = i['title'] + i['body'] 
         climate.append(article)
 
-        # tokens = tokenizer.tokenize(article) 
+        
         # if len(tokens) > 1024:
         #     sent = nltk.sent_tokenize(article)
         #     # print(len(sent))
@@ -211,11 +211,13 @@ def split_er_data():
         #     climate.append(article)
 
     print(len(climate))
-    for text in climate[30:]:
-        key = "train-" + str(count)
-        train_climate[key] = {"text":text,"label":0}
-        count+=1
-        if count == 2762:
+    for text in tqdm(climate[30:]):
+        tokens = tokenizer.tokenize(text) 
+        if len(tokens) < 2048:
+            key = "train-" + str(count)
+            train_climate[key] = {"text":text,"label":0}
+            count+=1
+        if count == 2100:
             break
     print("count final:",count)
     with open('train_climate_all.json','w') as f2:

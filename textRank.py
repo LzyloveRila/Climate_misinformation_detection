@@ -1,7 +1,7 @@
 import spacy
 import pytextrank
 import json
-from transformers import BertTokenizer
+# from transformers import BertTokenizer
 from tqdm import tqdm
 import numpy as np
 import nltk
@@ -10,41 +10,72 @@ import nltk
 #python -m spacy download en_core_web_sm
 
 nlp = spacy.load("en_core_web_sm")
-tokenizer = BertTokenizer.from_pretrained("bert-base-uncased",do_lower_case=True)
+# tokenizer = BertTokenizer.from_pretrained("bert-base-uncased",do_lower_case=True)
+# tokened_text = tokenizer.tokenize(summary)
 
 # add PyTextRank to the spaCy pipeline
 tr = pytextrank.TextRank()
 nlp.add_pipe(tr.PipelineComponent, name="textrank", last=True)
 
-with open('train.json','r') as f:
+
+# extract the key sentences in the articles as bert do not support long text
+with open('test-unlabelled.json','r') as f:
     data = json.load(f)
 f.close()
 
-count = 0
-summary_list = []
-for item in tqdm(data.values()):
-    text = item['text']
-    # print('===============================text==========')
-    # print(text)
-    # print('-------------summary')
-    doc = nlp(text)
-    summary = ""
-    for sent in doc._.textrank.summary(limit_phrases=20, limit_sentences=4):
-        summary += str(sent)
-        # print(sent)
-    tokened_text = tokenizer.tokenize(summary)
-    summary_list.append(len(summary))
-    count+=1
+def main():
+    number_of_sentences = []
+    train_total_extracted = {}
+    for item in tqdm(data.items()):
+        text = item[1]['text']
+        # statistic the article length by num of sentences
+        sent_token = nltk.sent_tokenize(text)
+        number_of_sentences.append(len(sent_token))
 
-print(np.mean(summary_list))
-print(summary_list)
+        # print('===============================text==========================')
+        # print(text)
+        # print('-------------summary')
+        doc = nlp(text)
+        summary = ""
+        for sent in doc._.textrank.summary(limit_phrases=20, limit_sentences=4):
+            summary += str(sent)
+
+        train_total_extracted[item[0]] = {'text':summary,'label':item[1]['label']}   
+    
+    with open('dev_extracted.json','w') as f2:
+        json.dump(train_total_extracted,f2)
+    f2.close()
+    print(np.mean(number_of_sentences))
+    print("===========================================================")
+    print(number_of_sentences)
 
 
+# main()
 
+def test_extract():
+    number_of_sentences = []
+    train_total_extracted = {}
+    for item in tqdm(data.items()):
+        text = item[1]['text']
+        # statistic the article length by num of sentences
+        sent_token = nltk.sent_tokenize(text)
+        number_of_sentences.append(len(sent_token))
 
+        # print('===============================text==========================')
+        # print(text)
+        # print('-------------summary')
+        doc = nlp(text)
+        summary = ""
+        for sent in doc._.textrank.summary(limit_phrases=20, limit_sentences=4):
+            summary += str(sent)
 
-# examine the top-ranked phrases in the document
-# for p in doc._.phrases:
-#     print("{:.4f} {:5d}  {}".format(p.rank, p.count, p.text))
-#     print(p.chunks)
+        train_total_extracted[item[0]] = {'text':summary}   
+    
+    with open('test_extracted.json','w') as f2:
+        json.dump(train_total_extracted,f2)
+    f2.close()
+    print(np.mean(number_of_sentences))
+    print("===========================================================")
+    print(number_of_sentences)
 
+test_extract()
