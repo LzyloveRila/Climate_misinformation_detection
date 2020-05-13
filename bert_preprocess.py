@@ -2,9 +2,10 @@ import json
 import pandas as pd
 import numpy as np
 from transformers import BertTokenizer
-# from textblob import TextBlob
+from textblob import TextBlob
 import nltk
 from tqdm import tqdm
+import os
 # from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 def real_data_to_trainjson():
@@ -40,28 +41,20 @@ def chechk_len():
 
 
 def concatenate_pos_neg_set():
-    with open('train.json','r') as f1:
+    with open('train_neg_new.json','r') as f1:
         text1 = json.load(f1)
     f1.close()
-    with open('train_neg.json','r') as f2:
+    with open('train_climate_test_new512.json','r') as f2:
         text2 = json.load(f2)
     f2.close()
 
     dataset = {**text1,**text2}
-    with open('train_total_balance_new.json','w') as f:
+    with open('train_negitive_samples.json','w') as f:
         json.dump(dataset,f)
 
-# concatenate_pos_neg_set()
+concatenate_pos_neg_set()
 
-# train_data = []
-# # train_labels = []
-# with open('train_1100.json','r') as f:
-#   data = json.load(f)
-#   for v in data.values():
-#     s = '[CLS] ' + v['text'] + ' [SEP]'
-#     train_data.append(s)
-#     # train_labels.append(v['label'])
-# f.close()
+
 
 
 def length_count(train_data):
@@ -96,6 +89,21 @@ def length_count(train_data):
     print("xxx256:",x_256,"percent:{:.2%}".format(x_256/total))
     print("xxx512:",x_512,"percent:{:.2%}".format(x_512/total))
     print("x_1024:",x_1024,"percent:{:.2%}".format(x_1024/total))
+    print(length)
+
+
+# train_data = []
+# # train_labels = []
+# with open('dev.json','r') as f:
+#   data = json.load(f)
+#   for v in data.values():
+#     s = v['text'] 
+#     train_data.append(s)
+#     # train_labels.append(v['label'])
+# f.close()
+# length_count(train_data)
+
+
 
 def truncating_from_middle(input_lists,maxlen,value=0):
     half = int(maxlen/2)
@@ -114,18 +122,17 @@ def truncating_from_middle(input_lists,maxlen,value=0):
 
 def sentiment():
     # find top sent in train_1100
-    with open('train_climate.json','r') as f:
-        text = f.read()
-        text = json.loads(text)
+    with open('train_fact_new2.json','r') as f:
+        data = f.read()
+        data = json.loads(data)
 
     f.close()
-    # print(text['train-0'])
 
-    train_total_set = []
-    train_label_1100 = []
-    for i,t in text.items():
-        train_total_set.append(t['text'])
-        train_label_1100.append(t['label'])
+    train_set = []
+    train_label = []
+    for i,t in data.items():
+        train_set.append(t['text'])
+        train_label.append(t['label'])
 
     # analyser = SentimentIntensityAnalyzer()
     # pos : compound > 0.05
@@ -134,47 +141,33 @@ def sentiment():
 
     # subjectivity 0-1
     neu,pos,neg = 0,0,0
-
+    sub = 0
     # for sent in sent1:
-    subj_lists = []
-    objective = 0
-    subjevt = 0
-    for i in tqdm(train_total_set):
-        sentences = nltk.sent_tokenize(i)
-        avg_subjectivity = []
-        obj,subj = 0,0
-        for sent in sentences:
-            doc2 = TextBlob(sent)
+    subj_list = []
+    polar_list = []
+    for i in tqdm(train_set):
+        sentences = nltk.sent_tokenize(i)    
+        doc2 = TextBlob(sentences[0])
+        polarity = doc2.polarity
+        subjectivity = doc2.subjectivity
+        subj_list.append(round(subjectivity,2))
+        polar_list.append(round(polarity,2))
         # score = analyser.polarity_scores(i)
         # score['compound]
-        # polarity = doc2.polarity
-        # if polarity > 0.0:
-        #     pos+=1
-        # elif polarity < 0.0:
-        #     neg+=1
-        # else:
-        #     neu+=1
-            subjectivity = doc2.subjectivity
-            avg_subjectivity.append(subjectivity)
-            if subjectivity < 0.3:
-                obj += 1
-            else:
-                subj +=1
-        # print(np.mean(avg_subjectivity))
-        # print("obj:",obj," subj:",subj)
-        subj_lists.append(np.mean(avg_subjectivity))
-        if np.mean(avg_subjectivity) > 0.3:
-            subjevt += 1
+        if subjectivity > 0.3:
+            sub+=1
+        if polarity > 0.0:
+            pos+=1
+        elif polarity < 0.0:
+            neg+=1
         else:
-            objective +=1 
-    print(subjevt,objective)
-
-
+            neu+=1
     
-    
-    # print("pos:",pos," neg:",neg," neu:",neu)
-    # print(sent1)
-    # print("label",train_label_1100[n])
+    print("number of pos:",pos," neg:",neg," neu:",neu)
+    print(np.mean(polar_list))
+    print(np.mean(subj_list))
+    print('=====================')
+    print(sub)
 
 # sentiment()
 
@@ -182,19 +175,17 @@ def sentiment():
 def split_er_data():
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased",do_lower_case=True)
 
-    with open('er_data_1500fromall.json','r') as f:
+    with open('er_data_test_climate.json','r') as f:
         data = json.load(f)
     f.close()
     # isDuplicate lang   title+  body   sentiment relevance
     train_climate = {}
-    count = 1782
+    count = 2545
     climate = []
     for i in data.values():
         # print(i['lang'],i['isDuplicate'],i['title'],i['sentiment'])
         article = i['title'] + i['body'] 
         climate.append(article)
-
-        
         # if len(tokens) > 1024:
         #     sent = nltk.sent_tokenize(article)
         #     # print(len(sent))
@@ -211,19 +202,81 @@ def split_er_data():
         #     climate.append(article)
 
     print(len(climate))
-    for text in tqdm(climate[30:]):
+    for text in tqdm(climate):
         tokens = tokenizer.tokenize(text) 
-        if len(tokens) < 2048:
+        if len(tokens) < 2000 and len(tokens) > 10:
             key = "train-" + str(count)
             train_climate[key] = {"text":text,"label":0}
             count+=1
-        if count == 2100:
-            break
+        # if count == 3600:
+        #     break
     print("count final:",count)
-    with open('train_climate_all.json','w') as f2:
+    with open('train_climate_test_new512.json','w') as f2:
         json.dump(train_climate,f2)
     f2.close()
     print("statistic phrase")
-    # length_count(climate)
+    length_count(climate)
 
 # split_er_data()
+
+def generate_polifact_data():
+    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased",do_lower_case=True)
+    path = './new data/politifact/real'
+    # path = './new data/gossipcop/real'
+    FileList = []
+    for home, dirs, files in os.walk(path):
+        for filename in files:
+            FileList.append(os.path.join(home, filename))
+    
+    print(len(FileList))
+    train_fact = {}
+    count = 2100
+    length_list = []
+    for file in tqdm(FileList):
+        # print(file)
+        with open(file,'r') as f:
+            data = json.load(f)
+            # print(data)
+        f.close()
+        text = data['title']+data['text']
+        # print(data['keywords'])
+        tokens = tokenizer.tokenize(text)
+        if len(tokens) > 8 and len(tokens) < 6000:
+            length_list.append(len(tokens)) 
+            key_name = 'train-' + str(count)
+            train_fact[key_name] = {"text":text,'label':0}
+            count += 1
+        if count == 3400:
+            break
+    print("final count:",count)
+    print(np.mean(length_list))
+    print("-------\n",length_list)
+    with open('train_fact_new.json','w') as f1:
+        json.dump(train_fact,f1)
+    f1.close()
+# generate_polifact_data()
+
+
+def check_output():
+    label1 = []
+    with open('test-output1.json','r') as f:
+        data=json.load(f)
+        # print(data)
+        for i in data.values():
+            label1.append(i['label'])
+    f.close()
+
+    label2=[]
+    with open('(LDA+SVM)new2test-output.json','r') as f:
+        data=json.load(f)
+        for i in data.values():
+            label2.append(i['label'])
+    f.close()
+
+    diff = 0
+    for i in range(len(label1)):
+        if label1[i] != label2[i]:
+            diff+=1
+    print(diff)
+# check_output()
+

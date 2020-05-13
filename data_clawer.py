@@ -1,3 +1,7 @@
+"""
+This script is to use the data clawer API by Event Registry
+"""
+
 from eventregistry import *
 KEY = "d567b42a-f8bd-4023-94c2-b8b530de5568"
 er = EventRegistry(apiKey = KEY)

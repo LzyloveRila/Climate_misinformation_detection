@@ -53,12 +53,9 @@ def preprocessing(text):
     tokens = [w.lower() for w in tokens]
     rem_stop_words  = [w for w in tokens if len(w)>2 
         if not w in stopwords.words('english')]
-    # stem_words = [stemmer.stem(w) for w in rem_stop_words]
-    lemma_words=[lemmatizer.lemmatize(w) for w in rem_stop_words]
-    # print(text)
+    stem_words = [stemmer.stem(w) for w in rem_stop_words]
+    lemma_words=[lemmatizer.lemmatize(w) for w in stem_words]
 
-    # print('-----------------')
-    # print(lemma_words)
     return " ".join(lemma_words)#lemma_words
 
 def print_top_words(model, feature_names, n_top_words):
@@ -82,7 +79,7 @@ def lda_sklearn():
     vectorizer_test = CountVectorizer(max_df=0.95, min_df=2,stop_words='english',vocabulary=tf_vectorizer.vocabulary_)
     tf_test = vectorizer_test.fit_transform(test_set) 
 
-    n_topic = 2
+    n_topic = 10
     lda = LatentDirichletAllocation(n_components=n_topic, max_iter=50,learning_method='batch')
     lda.fit(tf)        
 
@@ -94,7 +91,7 @@ def lda_sklearn():
     tf_feature_names = tf_vectorizer.get_feature_names()
     print_top_words(lda, tf_feature_names, n_top_words)
 
-lda_sklearn()
+# lda_sklearn()
 
 
 # refiltered =nltk.pos_tag(train_set[0])
